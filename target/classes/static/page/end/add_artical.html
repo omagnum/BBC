@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta HTTP-EQUIV="pragma" CONTENT="no-cache">
+    <meta HTTP-EQUIV="Cache-Control" CONTENT="no-cache, must-revalidate">
+    <meta HTTP-EQUIV="expires" CONTENT="0">
+    <title>文章管理</title>
+    <link rel="stylesheet" href="../../css/element.css">
+    <link rel="stylesheet" href="../../css/base.css">
+    <style>
+        .tox-tinymce-aux {
+            z-index: 5000 !important;
+        }
+
+    </style>
+
+</head>
+<body>
+<div id="wrapper" v-cloak>
+    <el-container>
+        <el-aside :width="isCollapse ? '64px' : '200px'" style="background-color: black; transition:width .5s">
+            <div style="background-color: black; height: 60px; line-height: 60px; text-align: center;
+                color: white; font-size: 20px;">
+                <transition name="el-fade-in-linear">
+                    <span name="fade" v-show="!isCollapse"><a href="/page/end/index.html">好大一个论坛</a></span>
+                </transition>
+            </div>
+            <el-menu :default-openeds="['1']" style="border: none;" background-color="black" text-color="#fff"
+                     active-text-color="#ffd04b"
+                     default-active="artical"
+                     class="el-menu-vertical-demo" :collapse="isCollapse">
+                <a href="/page/end/index.html">
+                    <el-menu-item index="home">
+                        <i class="el-icon-data-line"></i>
+                        <span slot="title">首页</span>
+                    </el-menu-item>
+                </a>
+                <el-submenu index="1" v-if="user.permission && user.permission.length > 0">
+                    <template slot="title">
+                        <i class="el-icon-menu"></i>
+                        <span slot="title">信息管理</span>
+                    </template>
+                    <a :href="item.path" v-for="item in user.permission" :key="item.id">
+                        <el-menu-item :index="item.flag">
+                            <i class="el-icon-s-data"></i>
+                            <span slot="title">{{item.name}}</span>
+                        </el-menu-item>
+                    </a>
+                </el-submenu>
+            </el-menu>
+        </el-aside>
+        <el-container>
+            <el-header style="background-color: black; line-height: 60px; color: white;">
+                <el-row>
+                    <el-col :span="1">
+                        <i style="font-size: 22px; cursor: pointer"
+                           :class="[isCollapse ? 'el-icon-s-unfold' : 'el-icon-s-fold']" @click="handleCollapse"></i>
+                    </el-col>
+                    <el-col :span="2" :offset="21" style="text-align: right">
+                        <span style="color: white; margin-right: 10px">{{user.username}}</span>
+                        <el-dropdown>
+                            <img :src=`/files/${user.avatar}`
+                                 style="width: 40px; height: 40px; margin-right: 10px; border-radius: 50%">
+                            <el-dropdown-menu slot="dropdown">
+                                <a href="/page/end/person.html"
+                                   style="display:inline-block; padding: 5px 0; width: 100px; text-align: center; color: black">个人信息</a>
+                                <a @click="logout" href="#"
+                                   style="display:block; width: 100px;  text-align: center; color: black">退出</a>
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                    </el-col>
+                </el-row>
+            </el-header>
+            <!-- 主体区域 -->
+            <el-main>
+                <div style="color: black; font-size: 20px; margin: 10px 0">文章管理</div>
+                <div style="height: 1px; background-color: white"></div>
+
+                <el-card>
+                    <el-row>
+                        <el-col :span="8">
+                            <el-form :model="entity" label-position="left" >
+                                <el-form-item label="标题" label-width="50px">
+                                    <el-input v-model="entity.title"></el-input>
+                                </el-form-item>
+
+                                <el-form-item label="分类" label-width="50px">
+                                    <el-select v-model="entity.category" placeholder="请选择">
+                                        <el-option
+                                                v-for="item in categorys"
+                                                :key="item.name"
+                                                :label="item.name"
+                                                :value="item.name">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="简介" label-width="50px">
+                                    <el-input v-model="entity.description"  type="textarea" :rows="4"></el-input>
+                                </el-form-item>
+                                <el-form-item label="封面" label-width="50px">
+                                    <el-upload
+                                            class="upload-demo"
+                                            action="/files/upload"
+                                            :file-list="[entity.cover]"
+                                            :on-success="successUpload"
+                                            list-type="picture">
+                                        <el-button size="small" type="primary">点击上传</el-button>
+                                        <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>
+                                    </el-upload>
+                                </el-form-item>
+                            </el-form>
+                        </el-col>
+                    </el-row>
+
+                    <textarea id="mytextarea" cols="30" rows="30"></textarea>
+
+                    <el-button @click="save" type="primary">发表文章</el-button>
+                </el-card>
+
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+
+<script src="../../js/jquery.min.js"></script>
+<script src="../../js/vue.min.js"></script>
+<script src="../../js/element.js"></script>
+<script src="../../js/tinymce/tinymce.min.js"></script>
+
+
+<script>
+
+    let urlBase = "/api/artical/";
+    new Vue({
+        el: "#wrapper",
+        data: {
+            id: undefined,
+            categorys: [],
+            user: {},
+            tableData: [],
+            pageNum: 1,
+            pageSize: 10,
+            total: 0,
+            dialogFormVisible: false,
+            entity: {},
+            isCollapse: false,
+        },
+        mounted() {
+            this.user = sessionStorage.getItem("user") ? JSON.parse(sessionStorage.getItem("user")) : {};
+            tinymce.init({
+                selector: '#mytextarea',
+                language: 'zh_CN',
+                plugins: ['quickbars', 'link', 'table', 'image'], //选择需加载的插件
+            });
+
+
+             this.id = location.search ?  location.search.split("=")[1] : undefined;
+             if (this.id) {
+                 $.get("/api/artical/" + this.id).then(res => {
+                    this.entity = res.data;
+                     setTimeout(() => {
+                         tinymce.editors[0].setContent(res.data.content);
+                     }, 100);
+
+                 })
+             }
+
+            $.get("/api/category").then(res => {
+                this.categorys = res.data;
+            })
+
+        },
+        methods: {
+            successUpload(res) {
+                this.entity.cover = "http://localhost:9999/files/" + res.data;
+                console.log(res)
+            },
+            handleCollapse() {
+                this.isCollapse = !this.isCollapse;
+            },
+            logout() {
+                $.get("/api/user/logout");
+                sessionStorage.removeItem("user");
+                location.href = "/page/end/login.html";
+            },
+            save() {
+                let type = this.entity.id ? "PUT" : "POST";
+                this.entity.content = tinymce.activeEditor.getContent();
+                if(!this.entity.title) {
+                    this.$message({
+                        message: '请输入文章名称',
+                        type: "warning"
+                    })
+                    return;
+                }
+                if(!this.entity.category) {
+                    this.$message({
+                        message: '请选择文章分类',
+                        type: "warning"
+                    })
+                    return;
+                }
+                if(!this.entity.content) {
+                    this.$message({
+                        message: '请输入文章内容',
+                        type: "warning"
+                    })
+                    return;
+                }
+
+                $.ajax({
+                    url: '/api/artical',
+                    type: type,
+                    contentType: "application/json",
+                    data: JSON.stringify(this.entity)
+                }).then(res => {
+                    if (res.code === '0') {
+                        this.$message({
+                            message: "提交成功",
+                            type: "success"
+                        });
+                        setTimeout(() => {
+                            location.href = 'artical.html';
+                        }, 1000)
+                    } else {
+                        this.$message({
+                            message: res.msg,
+                            type: "error"
+                        })
+                    }
+                    this.loadTable();
+                    this.dialogFormVisible = false;
+                })
+            }
+        }
+    })
+</script>
+</body>
+</html>

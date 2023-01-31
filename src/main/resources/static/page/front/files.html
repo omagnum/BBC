@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>文件资源</title>
+    <link rel="stylesheet" href="../../css/element.css">
+    <link rel="stylesheet" href="../../css/base.css">
+
+    <style>
+        a {
+            color: white;
+            text-align: center;
+        }
+        .active, a:hover {
+            background-color: #85C1E9;
+        }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <div style="height: 60px;line-height: 60px; background-color: #b3d4fc">
+            <el-row>
+                <el-col :span="3" :offset="6">
+                    <div style="color: white; font-size: 24px">
+                        <a href="index.html">好大一个论坛</a>
+                    </div>
+                </el-col>
+                <el-col :span="9">
+                    <div style="display: flex">
+                        <a href="index.html"><div style="width: 80px">首页</div></a>
+                        <a href="category.html"><div style="width: 80px">分类</div></a>
+                        <a href="collect.html"><div style="width: 80px">我的收藏</div></a>
+                        <a href="files.html"  class="active"><div style="width: 80px">文件资源</div></a>
+                        <a href="range.html"><div style="width: 80px">阅读排行</div></a>
+                        <a href="/page/end/artical.html"><div style="width: 80px">发布文章</div></a>
+                        <a href="/page/end/comment.html"><div style="width: 80px">评论管理</div></a>
+                    </div>
+                </el-col>
+                <el-col :span="6" style="text-align: right; padding-right: 20px">
+                    <div v-if="!user.username">
+                        <el-button type="primary" size="mini" @click="location.href = '/page/end/login.html'">登录</el-button>
+                        <el-button type="primary" size="mini" @click="location.href = '/page/end/register.html'">注册</el-button>
+                    </div>
+                    <div v-else>
+                        <span>{{ user.username }}</span>
+                        <el-button type="primary" size="mini" @click="logout">退出</el-button>
+                    </div>
+                </el-col>
+            </el-row>
+        </div>
+
+        <el-row style="margin-top: 20px">
+            <el-col :span="12" :offset="6">
+                <el-card style="min-height: 800px; position: relative">
+                    <el-table
+                            :data="tableData"
+                            style="width: 100%">
+                        <el-table-column
+                                label="文件名">
+                            <template slot-scope="scope">
+                                <a :href="scope.row.url" style="color: #1a1a1a">{{ scope.row.name }}</a>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                prop="username"
+                                label="上传人"
+                        >
+                        </el-table-column>
+                        <el-table-column
+                                prop="time"
+                                label="上传时间"
+                        >
+                        </el-table-column>
+                        <el-table-column
+                                fixed="right"
+                                label="操作"
+                                width="100">
+                            <template slot-scope="scope">
+                                <el-button @click="download(scope.row.file)" type="text" size="small">下载</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+
+                    <div style="height: 50px; line-height: 50px; text-align: center;  margin-top: 10px;">
+                        <el-pagination
+                                @size-change="handleSizeChange"
+                                @current-change="handleCurrentChange"
+                                :current-page="pageNum"
+                                :page-size="pageSize"
+                                small
+                                layout="prev, pager, next"
+                                :total="total">
+                        </el-pagination>
+                    </div>
+                </el-card>
+            </el-col>
+        </el-row>
+    </div>
+
+<!--    js-->
+    <script src="../../js/jquery.min.js"></script>
+
+    <script src="../../js/vue.min.js"></script>
+    <script src="../../js/element.js"></script>
+
+    <script>
+        new Vue({
+            el: "#wrapper",
+            data: {
+                user: {},
+                tableData: [],
+                total: 0,
+                pageNum: 1,
+                pageSize: 5
+            },
+            created() {
+                this.user = sessionStorage.getItem("user") ? JSON.parse(sessionStorage.getItem("user")) : {};
+                this.loadTable();
+            },
+            methods: {
+                download(file) {
+                  location.href = file
+                },
+                logout() {
+                    $.get("/api/user/logout");
+                    sessionStorage.removeItem("user");
+                    location.href = "/page/end/login.html";
+                },
+                loadTable() {
+                    $.get("/api/files/page?pageNum=" + this.pageNum + "&pageSize=" + this.pageSize).then(res => {
+                        this.tableData = res.data.records;
+                        this.total = res.data.total;
+                    })
+                },
+                handleSizeChange(pageSize) {
+                    this.pageSize = pageSize;
+                    this.loadTable();
+                },
+                handleCurrentChange(pageNum) {
+                    this.pageNum = pageNum;
+                    this.loadTable();
+                },
+            }
+        })
+    </script>
+</body>
+</html>

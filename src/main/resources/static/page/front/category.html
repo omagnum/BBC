@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>分类</title>
+    <link rel="stylesheet" href="../../css/element.css">
+    <link rel="stylesheet" href="../../css/base.css">
+
+    <style>
+        a {
+            color: white;
+            text-align: center;
+        }
+        .active, a:hover {
+            background-color: #85C1E9;
+        }
+        .category {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100px;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .categoryActive {
+            color: #3a8ee6;
+        }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <div style="height: 60px;line-height: 60px; background-color: #b3d4fc">
+            <el-row>
+                <el-col :span="3" :offset="6">
+                    <div style="color: white; font-size: 24px">
+                        <a href="index.html">好大一个论坛</a>
+                    </div>
+                </el-col>
+                <el-col :span="9">
+                    <div style="display: flex">
+                        <a href="index.html"><div style="width: 80px">首页</div></a>
+                        <a href="category.html" class="active"><div style="width: 80px">分类</div></a>
+                        <a href="collect.html"><div style="width: 80px">我的收藏</div></a>
+                        <a href="files.html"><div style="width: 80px">文件资源</div></a>
+                        <a href="range.html"><div style="width: 80px">阅读排行</div></a>
+                        <a href="/page/end/artical.html"><div style="width: 80px">发布文章</div></a>
+                        <a href="/page/end/comment.html"><div style="width: 80px">评论管理</div></a>
+                    </div>
+                </el-col>
+                <el-col :span="6" style="text-align: right; padding-right: 20px">
+                    <div v-if="!user.username">
+                        <el-button type="primary" size="mini" @click="location.href = '/page/end/login.html'">登录</el-button>
+                        <el-button type="primary" size="mini" @click="location.href = '/page/end/register.html'">注册</el-button>
+                    </div>
+                    <div v-else>
+                        <span>{{ user.username }}</span>
+                        <el-button type="primary" size="mini" @click="logout">退出</el-button>
+                    </div>
+                </el-col>
+            </el-row>
+        </div>
+
+        <el-row style="margin-top: 20px">
+            <el-col :span="12" :offset="6">
+                <el-card>
+                    <div style="display: flex">
+                        <div style="color: dodgerblue; font-size: 20px; flex: 1">分类</div>
+                        <div style="flex: 1; text-align: right">共 <span style="font-size: 20px; color: orange">{{total}}</span> 条</div>
+                    </div>
+                    <!--                    分割线-->
+                    <div style="height: 1px; margin: 10px 0; background-color: #ccc"></div>
+                    <div style="display: flex; flex-direction: row">
+                        <div class="category" @click="select(item.name)" v-for="item in categorys" :class="{ categoryActive: item.name === index }">{{ item.name }}</div>
+                    </div>
+                </el-card>
+
+
+                <el-card style="min-height: 800px; margin-top: 20px; position: relative">
+
+
+                    <div style="padding: 20px; border-bottom: 1px solid #ccc" v-for="item in blogs">
+                        <el-row>
+                            <el-col :span="18">
+                                <div style="font-size: 20px"><b style="cursor: pointer" @click="jump(item)">{{ item.title }}</b></div>
+                                <div style="padding: 20px 0; color: #888; margin-top: 20px">{{ item.description }}</div>
+                                <div style="color: #888; margin-top: 20px">
+                                    <div>
+                                        <span><i class="el-icon-user"></i> {{ item.username }}</span>
+                                        <span style="margin-left: 20px"><i class="el-icon-date"></i> {{ item.time }}</span>
+                                        <span style="margin-left: 20px"><i class="el-icon-reading"></i> {{ item.readCount }}</span>
+                                    </div>
+                                </div>
+                            </el-col>
+                            <el-col :span="6">
+                                <div style="padding: 10px">
+                                    <el-image :src="item.cover" style="width: 100px; height: 100px"></el-image>
+                                </div>
+                            </el-col>
+                        </el-row>
+                    </div>
+
+                    <div style="height: 50px; line-height: 50px; text-align: center;  margin-top: 10px;">
+                        <el-pagination
+                                @size-change="handleSizeChange"
+                                @current-change="handleCurrentChange"
+                                :current-page="pageNum"
+                                :page-size="pageSize"
+                                small
+                                layout="prev, pager, next"
+                                :total="total">
+                        </el-pagination>
+                    </div>
+                </el-card>
+            </el-col>
+        </el-row>
+    </div>
+
+<!--    js-->
+    <script src="../../js/jquery.min.js"></script>
+
+    <script src="../../js/vue.min.js"></script>
+    <script src="../../js/element.js"></script>
+
+    <script>
+        new Vue({
+            el: "#wrapper",
+            data: {
+                user: {},
+                index: '',
+                blogs: [],
+                total: 0,
+                pageNum: 1,
+                pageSize: 5,
+                categorys: []
+            },
+            created() {
+                this.user = sessionStorage.getItem("user") ? JSON.parse(sessionStorage.getItem("user")) : {};
+
+                this.loadTable();
+            },
+            methods: {
+                logout() {
+                    $.get("/api/user/logout");
+                    sessionStorage.removeItem("user");
+                    location.href = "/page/end/login.html";
+                },
+                select(category) {
+                    this.index = category;
+                    this.loadTable();
+                },
+                jump(obj) {
+                    obj.readCount = obj.readCount + 1;
+                    $.ajax({
+                        url: "/api/artical",
+                        type: 'PUT',
+                        contentType: "application/json",
+                        data: JSON.stringify(obj)
+                    }).then(res => {
+                        location.href = "detail.html?id=" + obj.id;
+                    })
+                },
+                loadTable() {
+                    $.get("/api/category").then(res => {
+                        this.categorys = res.data;
+                        if (!this.index) {
+                            this.index = res.data[0].name;
+                        }
+                        $.get("/api/artical/page?pageNum=" + this.pageNum + "&pageSize=" + this.pageSize + "&category=" + this.index).then(res => {
+                            this.blogs = res.data.records;
+                            this.total = res.data.total;
+                        })
+                    })
+
+                },
+                handleSizeChange(pageSize) {
+                    this.pageSize = pageSize;
+                    this.loadTable();
+                },
+                handleCurrentChange(pageNum) {
+                    this.pageNum = pageNum;
+                    this.loadTable();
+                },
+            }
+        })
+    </script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>阅读排行</title>
+    <link rel="stylesheet" href="../../css/element.css">
+    <link rel="stylesheet" href="../../css/base.css">
+
+    <style>
+        a {
+            color: white;
+            text-align: center;
+        }
+        .active, a:hover {
+            background-color: #85C1E9;
+        }
+        .line {
+            cursor: pointer;
+            color: #888;
+        }
+        .line:hover {
+            color: blue;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <div style="height: 60px;line-height: 60px; background-color: #b3d4fc">
+            <el-row>
+                <el-col :span="3" :offset="6">
+                    <div style="color: white; font-size: 24px">
+                        <a href="index.html">好大一个论坛</a>
+                    </div>
+                </el-col>
+                <el-col :span="9">
+                    <div style="display: flex">
+                        <a href="index.html" ><div style="width: 80px">首页</div></a>
+                        <a href="category.html"><div style="width: 80px">分类</div></a>
+                        <a href="collect.html"><div style="width: 80px">我的收藏</div></a>
+                        <a href="files.html"><div style="width: 80px">文件资源</div></a>
+                        <a href="range.html" class="active"><div style="width: 80px">阅读排行</div></a>
+                        <a href="/page/end/artical.html"><div style="width: 80px">发布文章</div></a>
+                        <a href="/page/end/comment.html"><div style="width: 80px">评论管理</div></a>
+                    </div>
+                </el-col>
+                <el-col :span="6" style="text-align: right; padding-right: 20px">
+                    <div v-if="!user.username">
+                        <el-button type="primary" size="mini" @click="location.href = '/page/end/login.html'">登录</el-button>
+                        <el-button type="primary" size="mini" @click="location.href = '/page/end/register.html'">注册</el-button>
+                    </div>
+                    <div v-else>
+                        <span>{{ user.username }}</span>
+                        <el-button type="primary" size="mini" @click="logout">退出</el-button>
+                    </div>
+                </el-col>
+            </el-row>
+        </div>
+
+        <el-row style="margin-top: 20px">
+            <el-col :span="12" :offset="6">
+                <el-card style="min-height: 800px; ">
+                    <el-row :gutter="20">
+<!--                        总榜-->
+                        <el-col :span="12">
+                            <div style="padding: 10px; border: 1px solid #ccc; border-radius: 5px">
+                                <div style="padding: 10px 0;border-bottom: 1px solid cornflowerblue; font-size: 20px"><b>总阅读排行榜</b></div>
+                                <div style="margin: 20px 0">
+                                    <div style="padding: 10px; border-bottom: 1px dashed #ccc" v-for="item in blogs">
+                                        <span class="line" @click="jump(item)">{{ item.title }}</span>
+                                        <span style="margin-left: 20px"><i class="el-icon-reading"></i>{{ item.readCount }}</span>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </el-col>
+<!--                        周榜-->
+                        <el-col :span="12">
+                            <div style="padding: 10px; border: 1px solid #ccc; border-radius: 5px">
+                                <div style="padding: 10px 0;border-bottom: 1px solid cornflowerblue; font-size: 20px"><b>本周阅读排行榜</b></div>
+                                <div style="margin: 20px 0">
+                                    <div style="padding: 10px; border-bottom: 1px dashed #ccc" v-for="item in weekBlogs">
+                                        <span class="line" @click="jump(item)">{{ item.title }}</span>
+                                        <span style="margin-left: 20px"><i class="el-icon-reading"></i>{{ item.readCount }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </el-col>
+                    </el-row>
+                </el-card>
+            </el-col>
+        </el-row>
+    </div>
+
+<!--    js-->
+    <script src="../../js/jquery.min.js"></script>
+
+    <script src="../../js/vue.min.js"></script>
+    <script src="../../js/element.js"></script>
+
+    <script>
+        new Vue({
+            el: "#wrapper",
+            data: {
+                user: {},
+                blogs: [],
+                weekBlogs: []
+            },
+            created() {
+                this.user = sessionStorage.getItem("user") ? JSON.parse(sessionStorage.getItem("user")) : {};
+                this.loadTable();
+            },
+            methods: {
+                logout() {
+                    $.get("/api/user/logout");
+                    sessionStorage.removeItem("user");
+                    location.href = "/page/end/login.html";
+                },
+                jump(obj) {
+                    obj.readCount = obj.readCount + 1;
+                    $.ajax({
+                        url: "/api/artical",
+                        type: 'PUT',
+                        contentType: "application/json",
+                        data: JSON.stringify(obj)
+                    }).then(res => {
+                        location.href = "detail.html?id=" + obj.id;
+                    })
+                },
+                loadTable() {
+                    $.get("/api/artical/range/all").then(res => {
+                        this.blogs = res.data;
+                    })
+                    $.get("/api/artical/range/week").then(res => {
+                        this.weekBlogs = res.data;
+                    })
+                }
+            }
+        })
+    </script>
+</body>
+</html>
